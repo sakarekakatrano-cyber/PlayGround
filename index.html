@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#050806">
+<meta name="description" content="Green Zone — an Xbox-inspired arcade survival game for the browser. WASD, mouse, gamepad, or touch.">
+<title>GREEN ZONE — Xbox Fan Arcade</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230a120b'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%239BF00B' stroke-width='4'/%3E%3Cpath d='M20 18 Q32 32 44 46 M44 18 Q32 32 20 46' fill='none' stroke='%239BF00B' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="stage" aria-label="Green Zone arena"></canvas>
+  <div class="fx-vignette" aria-hidden="true"></div>
+  <div class="fx-scanlines" aria-hidden="true"></div>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hud is-hidden" aria-live="polite">
+    <div class="hud-top">
+      <div class="hud-brand">
+        <svg class="orb" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="44" />
+          <path d="M31 23 Q50 47 69 77" />
+          <path d="M69 23 Q50 47 31 77" />
+        </svg>
+        <div class="hud-brand-copy">
+          <span class="hud-kicker">GREEN ZONE</span>
+          <div class="shield">
+            <div class="shield-track"><div id="shieldFill" class="shield-fill"></div><i class="shield-notch n1"></i><i class="shield-notch n2"></i><i class="shield-notch n3"></i></div>
+            <span id="shieldText">100</span>
+          </div>
+        </div>
+      </div>
+      <div class="hud-stats">
+        <div class="stat"><span>WAVE</span><b id="wave">1</b></div>
+        <div class="stat"><span>SCORE</span><b id="score">0</b></div>
+        <button id="pauseBtn" class="icon-btn" aria-label="Pause game" title="Pause (Esc)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.4" height="14" rx="1"/><rect x="13.6" y="5" width="3.4" height="14" rx="1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="combo" class="combo"></div>
+    <div id="overdrive" class="overdrive"><span>OVERDRIVE</span><div class="od-track"><div id="odFill"></div></div></div>
+
+    <div class="desktop-hint">
+      <span><b>WASD</b> move</span>
+      <span><b>Mouse</b> aim</span>
+      <span><b>Space</b> dash</span>
+      <span><b>Esc</b> pause</span>
+    </div>
+
+    <div id="touchSticks" class="touch-sticks" aria-hidden="true">
+      <div class="stick" id="stickL"><div class="stick-ring"></div><div class="knob" id="knobL"></div></div>
+      <div class="stick" id="stickR"><div class="stick-ring"></div><div class="knob" id="knobR"></div></div>
+    </div>
+    <button id="dashBtn" class="dash-btn" aria-label="Dash">
+      <span>DASH</span>
+      <i id="dashCooldown"></i>
+    </button>
+  </div>
+
+  <!-- ============ BOOT ============ -->
+  <section id="boot" class="screen boot">
+    <div class="boot-inner">
+      <svg class="boot-orb" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="44" />
+        <path d="M31 23 Q50 47 69 77" />
+        <path d="M69 23 Q50 47 31 77" />
+      </svg>
+      <h1 class="boot-title">GREEN ZONE</h1>
+      <p class="boot-sub">XBOX FAN ARCADE</p>
+      <div class="boot-bar"><i></i></div>
+      <p id="bootStatus" class="boot-status">CALIBRATING SHIELDS</p>
+    </div>
+    <button id="skipBoot" class="boot-skip">SKIP</button>
+  </section>
+
+  <!-- ============ MENU ============ -->
+  <section id="menu" class="screen menu is-hidden">
+    <div class="menu-grid">
+      <div class="menu-hero">
+        <div class="eyebrow"><span class="dot"></span> UNOFFICIAL XBOX FAN ARCADE</div>
+        <div class="hero-title">
+          <svg class="hero-orb" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="44" />
+            <path d="M31 23 Q50 47 69 77" />
+            <path d="M69 23 Q50 47 31 77" />
+          </svg>
+          <h1>GREEN<br><em>ZONE</em></h1>
+        </div>
+        <p class="tagline">The last green light in a dead orbit. Hold the zone, chain kills, and keep your shields alive.</p>
+        <div class="hero-actions">
+          <button id="playBtn" class="btn btn-primary btn-lg">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+            LAUNCH
+          </button>
+          <span class="kbd-hint">or press <b>Enter</b></span>
+        </div>
+        <div class="hero-foot">
+          <span id="bestLabel">BEST <b id="menuBest">0</b></span>
+          <span class="sep"></span>
+          <span id="gpadLabel">GAMEPAD READY</span>
+        </div>
+      </div>
+
+      <div class="menu-tiles">
+        <button id="controlsBtn" class="tile">
+          <span class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 7h9a4.5 4.5 0 0 1 4.4 3.6l.6 3.9c.2 1.4-1.2 2.5-2.4 1.7l-2-1.3a3 3 0 0 0-1.7-.5H8.6a3 3 0 0 0-1.7.5l-2 1.3c-1.2.8-2.6-.3-2.4-1.7l.6-3.9A4.5 4.5 0 0 1 7.5 7Z"/><circle cx="8.5" cy="11.5" r="1.1"/><circle cx="15.5" cy="10.5" r="1.1"/></svg>
+          </span>
+          <span class="tile-copy"><b>CONTROLS</b><small>Keys · Gamepad · Touch</small></span>
+          <span class="tile-arrow">›</span>
+        </button>
+        <button id="soundBtn" class="tile" aria-pressed="true">
+          <span class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path id="soundWave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></svg>
+          </span>
+          <span class="tile-copy"><b>AUDIO</b><small id="soundState">ON</small></span>
+          <span class="tile-arrow">›</span>
+        </button>
+        <div class="tile tile-static">
+          <span class="tile-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-2.9L7 19l1-6-4-4 5.5-.5z"/></svg>
+          </span>
+          <span class="tile-copy"><b>HIGH SCORE</b><small id="tileBest">0</small></span>
+          <span class="tile-rank" id="tileRank">ROOKIE</span>
+        </div>
+      </div>
+    </div>
+    <footer class="menu-footer">
+      <span>Fan project · Not affiliated with Microsoft · Xbox is a trademark of Microsoft Corporation</span>
+      <span>MADE FOR PLAYGROUND</span>
+    </footer>
+  </section>
+
+  <!-- ============ CONTROLS MODAL ============ -->
+  <section id="controls" class="screen modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="controlsTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="controlsTitle">CONTROLS</h2>
+        <button id="controlsClose" class="icon-btn" aria-label="Close controls">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="control-list">
+        <div class="control-row"><span class="ckeys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Move (or left stick)</span></div>
+        <div class="control-row"><span class="ckeys"><kbd>MOUSE</kbd></span><span>Aim · weapons auto-fire</span></div>
+        <div class="control-row"><span class="ckeys"><kbd>SPACE</kbd><kbd>SHIFT</kbd></span><span>Dash (or <b>A</b> / DASH button)</span></div>
+        <div class="control-row"><span class="ckeys"><kbd>ESC</kbd><kbd>P</kbd></span><span>Pause (or <b>START</b>)</span></div>
+        <div class="control-row"><span class="ckeys"><kbd>RT</kbd></span><span>Not needed — firing is automatic</span></div>
+      </div>
+      <div class="modal-note">
+        <b>Survival tips</b>
+        <ul>
+          <li>Shields recharge after a few seconds without damage.</li>
+          <li>Dash grants a brief invulnerability window.</li>
+          <li>Kill fast to stack your combo multiplier.</li>
+          <li>Every fifth wave sends a boss. Break its core.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAUSE ============ -->
+  <section id="pause" class="screen modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="modal-card pause-card">
+      <div class="modal-head"><h2 id="pauseTitle">PAUSED</h2><span id="pauseWave" class="modal-tag">WAVE 1</span></div>
+      <div class="pause-score"><span>SCORE</span><b id="pauseScore">0</b></div>
+      <div class="pause-actions">
+        <button id="resumeBtn" class="btn btn-primary">RESUME</button>
+        <button id="restartBtn" class="btn">RESTART</button>
+        <button id="quitBtn" class="btn btn-ghost">QUIT TO MENU</button>
+      </div>
+      <p class="modal-hint">Esc / Start to resume</p>
+    </div>
+  </section>
+
+  <!-- ============ GAME OVER ============ -->
+  <section id="over" class="screen modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+    <div class="modal-card over-card">
+      <p class="over-kicker" id="overKicker">SIGNAL LOST</p>
+      <h2 id="overTitle">ZONE<br><em>BREACHED</em></h2>
+      <div class="over-stats">
+        <div><span>SCORE</span><b id="finalScore">0</b></div>
+        <div><span>WAVE</span><b id="overWave">1</b></div>
+        <div><span>BEST</span><b id="finalBest">0</b></div>
+      </div>
+      <p id="newBest" class="new-best">NEW PERSONAL BEST</p>
+      <div class="pause-actions">
+        <button id="retryBtn" class="btn btn-primary">RETRY</button>
+        <button id="homeBtn" class="btn btn-ghost">MAIN MENU</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status"></div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
